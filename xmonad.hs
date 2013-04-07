@@ -7,8 +7,10 @@ import System.Exit
 import XMonad
 import XMonad.Hooks.DynamicLog
 import XMonad.Hooks.ManageDocks
+import XMonad.Hooks.ManageHelpers
 import XMonad.Hooks.SetWMName
 import XMonad.Hooks.EwmhDesktops
+
 import XMonad.Layout.NoBorders
 import XMonad.Layout.Spiral
 import XMonad.Layout.Tabbed
@@ -20,11 +22,20 @@ import XMonad.Layout.PerWorkspace
 
 import XMonad.Util.Run(spawnPipe)
 import XMonad.Util.EZConfig(additionalKeys)
+import qualified XMonad.Util.Themes as Theme
+
+import XMonad.Prompt
+import XMonad.Prompt.AppendFile
+import XMonad.Prompt.Shell
 
 import qualified XMonad.StackSet as W
 import qualified Data.Map        as M
 
+import Data.List (isInfixOf, isPrefixOf)
+
+import qualified XMonad.Actions.FlexibleManipulate as Flex
 import XMonad.Actions.UpdatePointer
+import XMonad.Actions.RotSlaves
 
 import XMonad.ManageHook
 import XMonad.Util.NamedScratchpad
@@ -41,6 +52,7 @@ scratchpads = [
      NS "htop" "gnome-terminal --role myhtop -x htop" (role =? "myhtop") defaultFloating
  ] where role = stringProperty "WM_WINDOW_ROLE"
 
+myTabTheme = (Theme.theme Theme.xmonadTheme)
 
 -- The preferred terminal program, which is used in a binding below and by
 -- certain contrib modules.
@@ -90,111 +102,22 @@ myNormalBorderColor  = "#7c7c7c"
 myFocusedBorderColor = "#ffb6b0"
  
 ------------------------------------------------------------------------
--- Key bindings. Add, modify or remove key bindings here.
---
-{-myKeys conf@(XConfig {XMonad.modMask = modMask}) = M.fromList $-}
- 
-    -- launch a terminal
-    {-[-}
-    {-((modMask .|. shiftMask, xK_Return), spawn $ XMonad.terminal conf)-}
-
- 
-    -- launch gmrun
-    {-, ((modMask .|. shiftMask, xK_p     ), spawn "gmrun")-}
- 
-    -- close focused window 
-    {-, ((modMask .|. shiftMask, xK_c     ), kill)-}
- 
-     -- Rotate through the available layout algorithms
-    {-, ((modMask,               xK_space ), sendMessage NextLayout)-}
- 
-    --  Reset the layouts on the current workspace to default
-    {-, ((modMask .|. shiftMask, xK_space ), setLayout $ XMonad.layoutHook conf)-}
- 
-    -- Resize viewed windows to the correct size
-    {-, ((modMask,               xK_n     ), refresh)-}
- 
-    -- Move focus to the next window
-    {-, ((modMask,               xK_Tab   ), windows W.focusDown)-}
- 
-    -- Move focus to the next window
-    {-, ((modMask,               xK_j     ), windows W.focusDown)-}
- 
-    -- Move focus to the previous window
-    {-, ((modMask,               xK_k     ), windows W.focusUp  )-}
- 
-    -- Move focus to the master window
-    {-, ((modMask,               xK_m     ), windows W.focusMaster  )-}
- 
-    -- Swap the focused window and the master window
-    {-, ((modMask,               xK_Return), windows W.swapMaster)-}
- 
-    -- Swap the focused window with the next window
-    {-, ((modMask .|. shiftMask, xK_j     ), windows W.swapDown  )-}
- 
-    -- Swap the focused window with the previous window
-    {-, ((modMask .|. shiftMask, xK_k     ), windows W.swapUp    )-}
- 
-    -- Shrink the master area
-    {-, ((modMask,               xK_h     ), sendMessage Shrink)-}
- 
-    -- Expand the master area
-    {-, ((modMask,               xK_l     ), sendMessage Expand)-}
- 
-    -- Push window back into tiling
-    {-, ((modMask,               xK_t     ), withFocused $ windows . W.sink)-}
- 
-    -- Increment the number of windows in the master area
-    {-, ((modMask              , xK_comma ), sendMessage (IncMasterN 1))-}
- 
-    -- Deincrement the number of windows in the master area
-    {-, ((modMask              , xK_period), sendMessage (IncMasterN (-1)))-}
-
-    -- toggle the status bar gap
-    -- TODO, update this binding with avoidStruts , ((modMask              , xK_b     ),
- 
-    -- Quit xmonad
-    {-, ((modMask .|. shiftMask, xK_q     ), io (exitWith ExitSuccess))-}
- 
-    -- Restart xmonad
-    {-, ((modMask              , xK_q     ), restart "xmonad" True)-}
-
-
-    {-]-}
-    {-++-}
- 
-    --
-    -- mod-[1..9], Switch to workspace N
-    -- mod-shift-[1..9], Move client to workspace N
-    --
-    {-[((m .|. modMask, k), windows $ f i)-}
-        {-| (i, k) <- zip (XMonad.workspaces conf) [xK_1 .. xK_9]-}
-        {-, (f, m) <- [(W.greedyView, 0), (W.shift, shiftMask)]]-}
-    {-++-}
- 
-    --
-    -- mod-{w,e,r}, Switch to physical/Xinerama screens 1, 2, or 3
-    -- mod-shift-{w,e,r}, Move client to screen 1, 2, or 3
-    --
-    {-[((m .|. modMask, key), screenWorkspace sc >>= flip whenJust (windows . f))-}
-        {-| (key, sc) <- zip [xK_w, xK_e, xK_r] [0..]-}
-        {-, (f, m) <- [(W.view, 0), (W.shift, shiftMask)]]-}
- 
- 
-------------------------------------------------------------------------
 -- Mouse bindings: default actions bound to mouse events
 --
 myMouseBindings (XConfig {XMonad.modMask = modMask}) = M.fromList $
  
     -- mod-button1, Set the window to floating mode and move by dragging
+    {-
+     -[ ((modMask, button1), (\w -> focus w >> mouseMoveWindow w))
+     -}
     [ ((modMask, button1), (\w -> focus w >> mouseMoveWindow w))
  
     -- mod-button2, Raise the window to the top of the stack
     , ((modMask, button2), (\w -> focus w >> windows W.swapMaster))
  
     -- mod-button3, Set the window to floating mode and resize by dragging
-    , ((modMask, button3), (\w -> focus w >> mouseResizeWindow w))
- 
+    -- , ((modMask, button3), (\w -> focus w >> mouseResizeWindow w))
+    , ((modMask, button3), (\w -> focus w >> Flex.mouseWindow Flex.discrete w))
     -- you may also bind events to the mouse scroll wheel (button4 and button5)
     ]
  
@@ -216,12 +139,14 @@ myTabConfig = defaultTheme {   activeBorderColor = "#7C7C7C"
                              , inactiveTextColor = "#EEEEEE"
                              , inactiveColor = "#000000" }
 
-myLayout = onWorkspace "2:web" (avoidStruts $ tabbed shrinkText myTabConfig ||| spiral (6/7) ) $ 
-           onWorkspace "4:office" (avoidStruts $ tabbed shrinkText myTabConfig ||| spiral (6/7) ) $ 
-           onWorkspace "3:msg" (avoidStruts $ Grid ||| spiral (6/7) ) $ 
-           onWorkspace "8" (avoidStruts $ Grid ||| spiral (6/7) ) $ 
+myLayout = onWorkspace "2:web" (avoidStruts $ tabbed shrinkText myTabTheme ) $ 
+           onWorkspace "1:code" (avoidStruts $ tabbed shrinkText myTabTheme ||| spiral (6/7) ) $ 
+           onWorkspace "4:office" (avoidStruts $ tabbed shrinkText myTabTheme||| spiral (6/7) ) $ 
+           onWorkspace "3:msg" (avoidStruts $ spiral (5/6) ) $ 
+           onWorkspace "9" (avoidStruts $ tabbed shrinkText myTabTheme) $ 
 
-           avoidStruts (tiled ||| Mirror tiled ||| tabbed shrinkText myTabConfig ||| Full ||| spiral (6/7))
+           avoidStruts $ tiled ||| Mirror tiled ||| tabbed shrinkText myTabTheme ||| Full ||| spiral (6/7) {-||| noBorders (fullscreenFull Full)-} 
+
   where
      -- default tiling algorithm partitions the screen into two panes
      tiled   = Tall nmaster delta ratio
@@ -255,19 +180,23 @@ myLayout = onWorkspace "2:web" (avoidStruts $ tabbed shrinkText myTabConfig ||| 
  
 myManageHook = (composeAll . concat $
             [[ className =? f --> doFloat | f <- myFloats]
+            ,[ isFullscreen                  --> doFullFloat]
             ,[ className =? i --> doIgnore | i <- myIgnores ]
             ,[ resource =? i --> doIgnore | i <- myResourceIgnores ]
             ,[ className =? c --> doShift "1:code" | c <- myCode ]
             ,[ className =? c --> doShift "2:web" | c <- myBrowsers ]
             ,[ className =? c --> doShift "3:msg" | c <- myComms ]
             ,[ className =? c --> doShift "4:office" | c <- myOffice ]
+            ,[ resource  =? c --> doShift "4:office" | c <- myOffice ]
+            ,[ prefixTitle "libreoffice" <||> prefixTitle "LibreOffice" --> doShift "4:office" ]
             ,[ className =? c --> doShift "5:media" | c <- myMedia ]
             ,[ className =? c --> doShift "6:vm" | c <- myVMs ]
             ])
     where
-    myFloats = ["Gimp", "MPlayer", "Galculator", "Yakuake"]
+    prefixTitle prefix = fmap (prefix `isPrefixOf`) title
+    myFloats = ["Gimp", "MPlayer", "Galculator", "Yakuake","mailterm"]
     myIgnores = [""]
-    myResourceIgnores =  ["desktop_window", "Do", "kdesktop"]
+    myResourceIgnores =  ["desktop_window", "Do", "kdesktop","mailterm"]
 
     myCode = ["Gnome-terminal","gnome-panel","Gedit", "Pgadmin3"]
     myBrowsers = ["Firefox", "Google-chrome"]
@@ -301,14 +230,14 @@ myFocusFollowsMouse = True
 --
 -- By default, do nothing.
 myStartupHook = return ()
- 
+
 ------------------------------------------------------------------------
 -- Now run xmonad with all the defaults we set up.
  
 -- Run xmonad with the settings you specify. No need to modify this.
 --
 main = do
- {-xmproc <- spawnPipe "/usr/bin/xmobar ~/.xmonad/xmobar"-}
+	{-xmproc <- spawnPipe "/usr/bin/xmobar ~/.xmonad/xmobar"-}
 	xmonad 
     $ ewmh 
     $ defaults {
@@ -330,12 +259,12 @@ main = do
         , ((mod4Mask, xK_t), namedScratchpadAction scratchpads "term")
         , ((mod4Mask, xK_d), namedScratchpadAction scratchpads "mytodo")
         , ((mod4Mask, xK_w), namedScratchpadAction scratchpads "worktodo")
+        , ((mod4Mask .|. controlMask, xK_x), shellPrompt defaultXPConfig)
+        , ((mod4Mask .|. controlMask, xK_n), appendFilePrompt defaultXPConfig "/home/jmyszka/xmonad.notes")
+        , ((mod4Mask, xK_r), rotSlavesUp)
         -- launch dmenu
         , ((myModMask,               xK_p     ), spawn "exe=`dmenu_path | ~/bin/dmenu` && eval \"exec $exe\"")
     ]
-
-
-    
 
 -- A structure containing your configuration settings, overriding
 -- fields in the default config. Any you don't override, will 
@@ -349,7 +278,6 @@ defaults = defaultConfig {
         focusFollowsMouse  = myFocusFollowsMouse,
         borderWidth        = myBorderWidth,
         modMask            = myModMask,
-        numlockMask        = myNumlockMask,
         workspaces         = myWorkspaces,
         normalBorderColor  = myNormalBorderColor,
         focusedBorderColor = myFocusedBorderColor,
