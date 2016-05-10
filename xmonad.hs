@@ -48,7 +48,7 @@ import XMonad.ManageHook
 
 
 scratchpads = [
-     NS "term" "gnome-terminal --role myterm" (role =? "myterm")
+     NS "term" "gnome-terminal --role myterm -x tmux attach || tmux" (role =? "myterm")
          (customFloating $ W.RationalRect (1/6) (1/6) (2/3) (2/3)),
      NS "notes" "gnome-terminal --role mynotes -x vim ~/notes/notes.txt" (role =? "mynotes")
          (customFloating $ W.RationalRect (1/6) (1/6) (2/3) (2/3)),
