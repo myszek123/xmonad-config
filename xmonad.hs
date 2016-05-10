@@ -48,15 +48,15 @@ import XMonad.ManageHook
 
 
 scratchpads = [
-     NS "term" "mate-terminal --role myterm" (role =? "myterm")
+     NS "term" "gnome-terminal --role myterm" (role =? "myterm")
          (customFloating $ W.RationalRect (1/6) (1/6) (2/3) (2/3)),
-     NS "notes" "mate-terminal --role mynotes -x vim ~/notes/notes.txt" (role =? "mynotes")
+     NS "notes" "gnome-terminal --role mynotes -x vim ~/notes/notes.txt" (role =? "mynotes")
          (customFloating $ W.RationalRect (1/6) (1/6) (2/3) (2/3)),
-     NS "mytodo" "mate-terminal --role mytodo -x vim ~/notes/home/todo.txt" (role =? "mytodo")
+     NS "mytodo" "gnome-terminal --role mytodo -x vim ~/notes/home/todo.txt" (role =? "mytodo")
          (customFloating $ W.RationalRect (1/6) (1/6) (2/3) (2/3)),
-     NS "worktodo" "mate-terminal --role worktodo -x vim ~/notes/work/todo.txt" (role =? "worktodo")
+     NS "worktodo" "gnome-terminal --role worktodo -x vim ~/notes/work/todo.txt" (role =? "worktodo")
          (customFloating $ W.RationalRect (1/6) (1/6) (2/3) (2/3)),
-     NS "htop" "mate-terminal --role myhtop -x htop" (role =? "myhtop") defaultFloating
+     NS "htop" "gnome-terminal --role myhtop -x htop" (role =? "myhtop") defaultFloating
  ] where role = stringProperty "WM_WINDOW_ROLE"
 
 myTabTheme = (Theme.theme Theme.xmonadTheme)
@@ -196,7 +196,7 @@ myManageHook = (composeAll . concat $
     myIgnores = [""]
     myResourceIgnores =  ["desktop_window", "Do", "kdesktop","mailterm"]
 
-    myCode = ["Gnome-terminal","gnome-panel","Gedit", "Pgadmin3", "mate-terminal", "Mate-terminal"]
+    myCode = ["Gnome-terminal","gnome-panel","Gedit", "Pgadmin3", "gnome-terminal", "gnome-terminal"]
     myBrowsers = ["Firefox", "Google-chrome"]
     myComms = ["Pidgin","Thunderbird"]
     myOffice = ["OpenOffice.org 3.2","libreoffice-calc","libreoffice-writer","libreoffice-startcenter","LibreOffice 3.3","LibreOffice 3.4","soffice","Evince","mysql-workbench-bin"]
@@ -266,9 +266,10 @@ main = do
         , ((mod4Mask, xK_r), rotSlavesUp)
         , ((mod4Mask, xK_p ), spawn "gnome-do")
         , ((mod4Mask .|. controlMask, xK_x), shellPrompt defaultXPConfig)
-        , ((mod4Mask .|. controlMask, xK_n), appendFilePrompt defaultXPConfig "/home/myszka/xmonad.notes")
+        , ((mod4Mask .|. controlMask, xK_n), appendFilePrompt defaultXPConfig "~/xmonad.notes")
         , ((mod4Mask .|. controlMask, xK_t), sendMessage ToggleStruts)
         , ((mod4Mask .|. controlMask, xK_p), spawn "dmenu_run")
+        , ((mod4Mask .|. controlMask, xK_q), spawn myRestart)
     ])
 
 defaults = defaultConfig {
@@ -286,16 +287,16 @@ defaults = defaultConfig {
     }
 
 myXmonadBar = "dzen2 -xs '0' -y '0' -h '14' -w '1440' -ta 'l' -fg '#FFFFFF' -bg '#1B1D1E'"
-myStatusBar = "conky -c /home/myszka/.conkyrc | dzen2 -xs '2' -w '1440' -h '14' -ta 'r' -bg '#1B1D1E' -fg '#FFFFFF' -y '0'"
-myBitmapsDir = "/home/myszka/.xmonad/dzen2"
+myStatusBar = "conky -c ~/.conkyrc | dzen2 -xs '2' -w '1440' -h '14' -ta 'r' -bg '#1B1D1E' -fg '#FFFFFF' -y '0'"
+myBitmapsDir = "~/.xmonad/dzen2"
 
 myLogHook :: Handle -> X ()
-myLogHook h = dynamicLogWithPP $ defaultPP
+myLogHook h = (dynamicLogWithPP $ defaultPP
     {
       ppCurrent           =   dzenColor "#ebac54" "#1B1D1E" . pad
         , ppVisible           =   dzenColor "white" "#1B1D1E" . pad
-        , ppHidden            =   dzenColor "white" "#1B1D1E" . pad
-        , ppHiddenNoWindows   =   dzenColor "#7b7b7b" "#1B1D1E" . pad
+        , ppHidden            =   dzenColor "white" "#1B1D1E" . pad . noScratchPad
+        , ppHiddenNoWindows   =   dzenColor "#7b7b7b" "#1B1D1E" . pad . namedOnly
         , ppUrgent            =   dzenColor "black" "red" . pad
         , ppWsSep             =   " "
         , ppSep               =   "  |  "
@@ -307,7 +308,17 @@ myLogHook h = dynamicLogWithPP $ defaultPP
                                      "Simple Float"              ->      "~"
                                      _                           ->      x
                                     )
-        , ppTitle             =   (" " ++) . dzenColor "white" "#1B1D1E" . dzenEscape
+        , ppTitle             =   (" " ++) . dzenColor "white" "#1B1D1E" . dzenEscape . shorten 50
         , ppOutput            =   hPutStrLn h
-    }
+    }) >> updatePointer (0.5, 0.5) (0.5, 0.5)
+    where
+      -- both lines did not work for me
+      -- thanks byorgey (this filters out NSP too)
+      namedOnly ws = if any (`elem` ws) ['a'..'z'] then pad ws else ""
 
+      -- my own filter out scratchpad function
+      noScratchPad ws = if ws == "NSP" then "" else pad ws
+
+myRestart  = "for pid in `pgrep conky`; do kill -9 $pid; done && " ++
+      "for pid in `pgrep dzen2`; do kill -9 $pid; done && " ++
+      "xmonad --recompile && xmonad --restart"
