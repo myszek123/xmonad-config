@@ -196,7 +196,7 @@ myManageHook = (composeAll . concat $
     myIgnores = [""]
     myResourceIgnores =  ["desktop_window", "Do", "kdesktop","mailterm"]
 
-    myCode = ["Gnome-terminal","gnome-panel","Gedit", "Pgadmin3", "gnome-terminal", "gnome-terminal"]
+    myCode = ["Gnome-terminal","gnome-panel","Gedit", "Pgadmin3", "mate-terminal", "Mate-terminal"]
     myBrowsers = ["Firefox", "Google-chrome"]
     myComms = ["Pidgin","Thunderbird"]
     myOffice = ["OpenOffice.org 3.2","libreoffice-calc","libreoffice-writer","libreoffice-startcenter","LibreOffice 3.3","LibreOffice 3.4","soffice","Evince","mysql-workbench-bin"]
