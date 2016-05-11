@@ -8,6 +8,7 @@
 import System.IO
 import System.Exit
 import XMonad
+import My
 import XMonad.Hooks.DynamicLog
 import XMonad.Hooks.ManageDocks
 import XMonad.Hooks.ManageDocks (ToggleStruts(ToggleStruts))
@@ -47,34 +48,9 @@ import qualified XMonad.Actions.FlexibleManipulate as Flex
 import XMonad.ManageHook
 
 
-scratchpads = [
-     NS "term" "gnome-terminal --role myterm -x tmux attach || tmux" (role =? "myterm")
-         (customFloating $ W.RationalRect (1/6) (1/6) (2/3) (2/3)),
-     NS "notes" "gnome-terminal --role mynotes -x vim ~/notes/notes.txt" (role =? "mynotes")
-         (customFloating $ W.RationalRect (1/6) (1/6) (2/3) (2/3)),
-     NS "mytodo" "gnome-terminal --role mytodo -x vim ~/notes/home/todo.txt" (role =? "mytodo")
-         (customFloating $ W.RationalRect (1/6) (1/6) (2/3) (2/3)),
-     NS "worktodo" "gnome-terminal --role worktodo -x vim ~/notes/work/todo.txt" (role =? "worktodo")
-         (customFloating $ W.RationalRect (1/6) (1/6) (2/3) (2/3)),
-     NS "htop" "gnome-terminal --role myhtop -x htop" (role =? "myhtop") defaultFloating
- ] where role = stringProperty "WM_WINDOW_ROLE"
-
-myTabTheme = (Theme.theme Theme.xmonadTheme)
-
--- The preferred terminal program, which is used in a binding below and by
--- certain contrib modules.
---
-myTerminal      = "gnome-terminal"
- 
--- Width of the window border in pixels.
---
-myBorderWidth   = 1
- 
--- modMask lets you specify which modkey you want to use. The default
--- is mod1Mask ("left alt").  You may also consider using mod3Mask
--- ("right alt"), which does not conflict with emacs keybindings. The
--- "windows key" is usually mod4Mask.
---
+-- "windows key" -> mod4Mask.
+-- "right alt"   -> mod3Mask.
+-- "left alt"    -> mod1Mask.
 myModMask       = mod1Mask
  
 -- The mask for the numlock key. Numlock status is "masked" from the
@@ -91,32 +67,13 @@ myModMask       = mod1Mask
 -- numlock status separately.
 --
 myNumlockMask   = mod2Mask
+
+myWorkspaces    = ["1:code","2:web","3:msg","4:office"] ++ map show [5..9]
  
--- The default number of workspaces (virtual screens) and their names.
--- By default we use numeric strings, but any string may be used as a
--- workspace name. The number of workspaces is determined by the length
--- of this list.
---
--- A tagging example:
---
--- > workspaces = ["web", "irc", "code" ] ++ map show [4..9]
---
-myWorkspaces    = ["1:code","2:web","3:msg","4:office","5","6","7","8","9"]
  
--- Border colors for unfocused and focused windows, respectively.
---
-myNormalBorderColor  = "#7c7c7c"
-myFocusedBorderColor = "#ffb6b0"
- 
-------------------------------------------------------------------------
--- Mouse bindings: default actions bound to mouse events
---
 myMouseBindings (XConfig {XMonad.modMask = modMask}) = M.fromList $
  
     -- mod-button1, Set the window to floating mode and move by dragging
-    {-
-     -[ ((modMask, button1), (\w -> focus w >> mouseMoveWindow w))
-     -}
     [ ((modMask, button1), (\w -> focus w >> mouseMoveWindow w))
  
     -- mod-button2, Raise the window to the top of the stack
@@ -139,12 +96,6 @@ myMouseBindings (XConfig {XMonad.modMask = modMask}) = M.fromList $
 -- The available layouts.  Note that each layout is separated by |||,
 -- which denotes layout choice.
 --
-myTabConfig = defaultTheme {   activeBorderColor = "#7C7C7C"
-                             , activeTextColor = "#CEFFAC"
-                             , activeColor = "#000000"
-                             , inactiveBorderColor = "#7C7C7C"
-                             , inactiveTextColor = "#EEEEEE"
-                             , inactiveColor = "#000000" }
 
 myLayout = onWorkspace "2:web" (avoidStruts $ tabbed shrinkText myTabTheme ) $ 
            onWorkspace "1:code" (avoidStruts $ tabbed shrinkText myTabTheme ||| spiral (6/7) ) $ 
@@ -173,9 +124,7 @@ myLayout = onWorkspace "2:web" (avoidStruts $ tabbed shrinkText myTabTheme ) $
 -- To match on the WM_NAME, you can use 'title' in the same way that
 -- 'className' and 'resource' are used below.
 --
-{-myManageHook = composeAll-}
-    {-, resource  =? "compose"        --> doFloat-}
- 
+
 myManageHook = (composeAll . concat $
             [[ className =? f --> doFloat | f <- myFloats]
             ,[ isFullscreen                  --> doFullFloat]
@@ -196,16 +145,13 @@ myManageHook = (composeAll . concat $
     myIgnores = [""]
     myResourceIgnores =  ["desktop_window", "Do", "kdesktop","mailterm"]
 
-    myCode = ["Gnome-terminal","gnome-panel","Gedit", "Pgadmin3", "gnome-terminal", "gnome-terminal"]
+    myCode = ["Gnome-terminal","gnome-panel","Gedit", "Pgadmin3", "Mate-terminal", "mate-terminal"]
     myBrowsers = ["Firefox", "Google-chrome"]
     myComms = ["Pidgin","Thunderbird"]
     myOffice = ["OpenOffice.org 3.2","libreoffice-calc","libreoffice-writer","libreoffice-startcenter","LibreOffice 3.3","LibreOffice 3.4","soffice","Evince","mysql-workbench-bin"]
     myMedia = ["Rhythmbox","vlc"]
     myVMs = ["VirtualBox"]
  
--- Whether focus follows the mouse pointer.
-myFocusFollowsMouse :: Bool
-myFocusFollowsMouse = True
  
  
 ------------------------------------------------------------------------
@@ -220,33 +166,8 @@ myFocusFollowsMouse = True
 --
  
 ------------------------------------------------------------------------
--- Startup hook
- 
--- Perform an arbitrary action each time xmonad starts or is restarted
--- with mod-q.  Used by, e.g., XMonad.Layout.PerWorkspace to initialize
--- per-workspace layout choices.
---
--- By default, do nothing.
-myStartupHook = return ()
 
-------------------------------------------------------------------------
-{-xmproc <- spawnPipe "/usr/bin/xmobar ~/.xmonad/xmobar"-}
-{-topStatusBar <- spawnPipe myTopStatusBar-}
-  {-spawnPipe myTopStatusBar-}
-  {-spawnPipe "conky -c ~/.xmonad/conky/dzen | dzen2 -p -xs 1 -ta l -e 'onstart=lower'"-}
-  {-h <- spawnPipe "dzen2 -p -xs 1 -ta l -fn Verdana-12 -e 'onstart=lower'"-}
-  {-xmproc <- spawnPipe "dzen2 -p -xs 1 -ta l -fn Verdana-12 -e 'onstart=lower'"-}
-  {-xmproc <- spawnPipe "xmobar /home/myszka/.xmonad/xmobar.config"-}
-  {-spawnPipe "/home/myszka/.xmonad/statusbar.sh"-}
-  --xmonad $ ewmh $ (defaults {
-    {-logHook            =  updatePointer (Relative 0.5 0.5),-}
-    {-logHook            =  updatePointer (0.5, 0.5) (0, 0),-}
-    {-logHook            = dynamicLogWithPP $ defaultPP { ppOutput = hPutStrLn h  } <+> updatePointer (Relative 0.5 0.5),-}
-    {-logHook            = dynamicLogWithPP $ defaultPP { ppOutput = hPutStrLn h  },-}
-    {-logHook            = dynamicLogWithPP dzenPP-}
-    {-logHook            = dynamicLogWithPP xmobarPP-}
-                              {-{ ppOutput = hPutStrLn xmproc , ppTitle = xmobarColor "green" "" . shorten 50 },-}
-------------------------------------------------------------------------
+myStartupHook = return ()
 
 main :: IO ()
 main = do
@@ -254,15 +175,15 @@ main = do
   dzenRightBar <- spawnPipe myStatusBar
   xmonad $ withUrgencyHookC dzenUrgencyHook { args = ["-bg", "red", "fg", "black", "-xs", "1", "-y", "25"] } urgencyConfig { remindWhen = Every 15 } $  (defaults {
     logHook = myLogHook dzenLeftBar >> fadeInactiveLogHook 0xdddddddd, 
-    manageHook         = manageDocks <+> myManageHook <+> namedScratchpadManageHook scratchpads,
+    manageHook         = manageDocks <+> myManageHook <+> namedScratchpadManageHook myScratchpads,
     startupHook        = setWMName "LG3D"
   }
     `additionalKeys` [ ((myModMask .|. controlMask, xK_l     ), spawn "gnome-screensaver-command  --lock")
-        , ((mod4Mask, xK_h), namedScratchpadAction scratchpads "htop")
-        , ((mod4Mask, xK_n), namedScratchpadAction scratchpads "notes")
-        , ((mod4Mask, xK_t), namedScratchpadAction scratchpads "term")
-        , ((mod4Mask, xK_d), namedScratchpadAction scratchpads "mytodo")
-        , ((mod4Mask, xK_w), namedScratchpadAction scratchpads "worktodo")
+        , ((mod4Mask, xK_h), namedScratchpadAction myScratchpads "htop")
+        , ((mod4Mask, xK_n), namedScratchpadAction myScratchpads "notes")
+        , ((mod4Mask, xK_t), namedScratchpadAction myScratchpads "term")
+        , ((mod4Mask, xK_d), namedScratchpadAction myScratchpads "mytodo")
+        , ((mod4Mask, xK_w), namedScratchpadAction myScratchpads "worktodo")
         , ((mod4Mask, xK_r), rotSlavesUp)
         , ((mod4Mask, xK_p ), spawn "gnome-do")
         , ((mod4Mask .|. controlMask, xK_x), shellPrompt defaultXPConfig)
@@ -274,21 +195,17 @@ main = do
 
 defaults = defaultConfig {
         terminal           = myTerminal,
-        focusFollowsMouse  = myFocusFollowsMouse,
-        borderWidth        = myBorderWidth,
+        focusFollowsMouse  = True,
+        borderWidth        = 1,
         modMask            = myModMask,
         workspaces         = myWorkspaces,
-        normalBorderColor  = myNormalBorderColor,
-        focusedBorderColor = myFocusedBorderColor,
+        normalBorderColor  = "#7c7c7c",
+        focusedBorderColor = "#ffb6b0",
         mouseBindings      = myMouseBindings,
         layoutHook         = smartBorders $ myLayout,
         manageHook         = myManageHook ,
         startupHook        = myStartupHook
     }
-
-myXmonadBar = "dzen2 -xs '0' -y '0' -h '14' -w '1440' -ta 'l' -fg '#FFFFFF' -bg '#1B1D1E'"
-myStatusBar = "conky -c ~/.conkyrc | dzen2 -xs '2' -w '1440' -h '14' -ta 'r' -bg '#1B1D1E' -fg '#FFFFFF' -y '0'"
-myBitmapsDir = "~/.xmonad/dzen2"
 
 myLogHook :: Handle -> X ()
 myLogHook h = (dynamicLogWithPP $ defaultPP
@@ -305,6 +222,7 @@ myLogHook h = (dynamicLogWithPP $ defaultPP
                                      "ResizableTall"             ->      "^i(" ++ myBitmapsDir ++ "/tall.xbm)"
                                      "Mirror ResizableTall"      ->      "^i(" ++ myBitmapsDir ++ "/mtall.xbm)"
                                      "Full"                      ->      "^i(" ++ myBitmapsDir ++ "/full.xbm)"
+                                     "Spiral"                    ->      "^i(" ++ myBitmapsDir ++ "/full.xbm)"
                                      "Simple Float"              ->      "~"
                                      _                           ->      x
                                     )
@@ -312,13 +230,5 @@ myLogHook h = (dynamicLogWithPP $ defaultPP
         , ppOutput            =   hPutStrLn h
     }) >> updatePointer (0.5, 0.5) (0.5, 0.5)
     where
-      -- both lines did not work for me
-      -- thanks byorgey (this filters out NSP too)
       namedOnly ws = if any (`elem` ws) ['a'..'z'] then pad ws else ""
-
-      -- my own filter out scratchpad function
       noScratchPad ws = if ws == "NSP" then "" else pad ws
-
-myRestart  = "for pid in `pgrep conky`; do kill -9 $pid; done && " ++
-      "for pid in `pgrep dzen2`; do kill -9 $pid; done && " ++
-      "xmonad --recompile && xmonad --restart"
