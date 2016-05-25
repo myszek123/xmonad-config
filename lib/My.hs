@@ -18,7 +18,7 @@ module My (myRestart, myXmonadBar, myStatusBar, myBitmapsDir, myTerminal, myTabT
   myTabTheme = (Theme.theme Theme.xmonadTheme)
 
   myScratchpads = [
-       NS "term" "gnome-terminal --role myterm -x tmux attach || tmux" (role =? "myterm")
+       NS "term" "gnome-terminal --role myterm -x tmux new-session -A -s workbench" (role =? "myterm")
            (customFloating $ W.RationalRect (1/6) (1/6) (2/3) (2/3)),
        NS "notes" "gnome-terminal --role mynotes -x vim ~/notes/notes.txt" (role =? "mynotes")
            (customFloating $ W.RationalRect (1/6) (1/6) (2/3) (2/3)),
